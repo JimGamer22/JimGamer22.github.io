@@ -12,6 +12,10 @@
       font-family: Arial, sans-serif;
       padding: 20px;
     }
+    h1, h2 {
+      color: #58a6ff;
+      text-shadow: 0 0 10px #58a6ff;
+    }
     table {
       border-collapse: collapse;
       width: 100%;
@@ -29,75 +33,116 @@
     td {
       background-color: #0d1117;
     }
-    #stocksChart {
-      background-color: #0d1117;
-      border: 1px solid #30363d;
+    .profit {
+      color: #0aff99;
+      text-shadow: 0 0 10px #0aff99;
+      font-weight: bold;
     }
-    .neon {
-      color: #58a6ff;
+    .loss {
+      color: #ff4c4c;
+      text-shadow: 0 0 10px #ff4c4c;
+      font-weight: bold;
+    }
+    canvas.sparkline {
+      height: 30px !important;
+      width: 100px !important;
     }
   </style>
 </head>
 <body>
-  <h1 class="neon">Mein Portfolio – NVIDIA (NVDA)</h1>
+  <h1>Mein Portfolio – NVIDIA (NVDA)</h1>
   <table id="stocksTable">
     <thead>
       <tr>
-        <th>Name</th><th>Symbol</th><th>Aktueller Preis (USD)</th><th>Wert deiner 100 USD Investition (USD)</th>
+        <th>Name</th>
+        <th>Symbol</th>
+        <th>Preis (USD)</th>
+        <th>Wert Investition (CHF)</th>
+        <th>Gewinn/Verlust</th>
+        <th>Mini-Chart</th>
       </tr>
     </thead>
     <tbody></tbody>
   </table>
 
-  <h2 class="neon">Preis‑Chart</h2>
+  <h2>Preis-Chart</h2>
   <canvas id="stocksChart" width="800" height="400"></canvas>
 
   <script>
-    // <== hier deinen eigenen API Schlüssel einsetzen:
     const FINNHUB_API_KEY = "d4o9cqhr01quuso8e7f0d4o9cqhr01quuso8e7fg";
+    const INVESTED_CHF = 100; // investierter Betrag in CHF
+    const PRICE_AT_PURCHASE_USD = 300; // angenommen: Kaufkurs der Aktie in USD
+    const SYMBOL = "NVDA";
+    const NAME = "NVIDIA";
 
-    async function fetchPrice(symbol) {
+    async function fetchPriceUSD(symbol) {
       const resp = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`);
-      const json = await resp.json();
-      return json.c; // 'c' = aktueller Kurs
+      const data = await resp.json();
+      return data.c;
     }
 
-    async function load() {
-      const symbol = "NVDA";
-      const name = "NVIDIA";
-      const price = await fetchPrice(symbol);
-      const invested = 100; // dein investierter Betrag in USD
-      const valueNow = (invested / price).toFixed(4) * price; // vereinfacht: investiert / preis * preis → eigentlich investiert
-      const tableBody = document.querySelector("#stocksTable tbody");
-      const row = document.createElement("tr");
-      row.innerHTML = `<td>${name}</td><td>${symbol}</td><td>${price.toFixed(2)}</td><td>${( (invested / price) * price ).toFixed(2)}</td>`;
-      tableBody.appendChild(row);
-      drawChart(symbol, price);
+    async function fetchUSDToCHF() {
+      const resp = await fetch(`https://api.exchangerate.host/latest?base=USD&symbols=CHF`);
+      const data = await resp.json();
+      return data.rates.CHF;
     }
 
-    async function drawChart(symbol, currentPrice) {
-      // Historische 1‑Monats‑Daten
-      const now = Math.floor(Date.now() / 1000);
+    async function fetchHistorical(symbol) {
+      const now = Math.floor(Date.now()/1000);
       const monthAgo = now - 30*24*60*60;
       const resp = await fetch(`https://finnhub.io/api/v1/stock/candle?symbol=${symbol}&resolution=D&from=${monthAgo}&to=${now}&token=${FINNHUB_API_KEY}`);
       const data = await resp.json();
-      const prices = data.c; // Schlusskurse
-      const labels = data.t.map(ts => new Date(ts*1000).toLocaleDateString());
+      return data.c; // Schlusskurse
+    }
 
-      const ctx = document.getElementById('stocksChart').getContext('2d');
+    async function loadStocks() {
+      const usdPrice = await fetchPriceUSD(SYMBOL);
+      const usdToChf = await fetchUSDToCHF();
+      const chfValue = usdPrice * usdToChf * (INVESTED_CHF / (PRICE_AT_PURCHASE_USD * usdToChf));
+      const profit = chfValue - INVESTED_CHF;
+      const profitClass = profit >= 0 ? "profit" : "loss";
+
+      const tableBody = document.querySelector("#stocksTable tbody");
+      tableBody.innerHTML = ""; // clear previous
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${NAME}</td>
+        <td>${SYMBOL}</td>
+        <td>${usdPrice.toFixed(2)}</td>
+        <td>${chfValue.toFixed(2)}</td>
+        <td class="${profitClass}">${profit >= 0 ? '+' : ''}${profit.toFixed(2)}</td>
+        <td><canvas class="sparkline" id="sparkline"></canvas></td>
+      `;
+      tableBody.appendChild(tr);
+
+      const historical = await fetchHistorical(SYMBOL);
+      drawSparkline("sparkline", historical);
+      drawMainChart(historical);
+    }
+
+    function drawSparkline(id, data) {
+      const ctx = document.getElementById(id).getContext('2d');
       new Chart(ctx, {
         type: 'line',
-        data: { labels: labels, datasets: [{ label: 'Preis (USD)', data: prices, borderColor: '#58a6ff', backgroundColor: 'rgba(88,166,255,0.2)' }] },
-        options: {
-          scales: { y: { beginAtZero: false } }
-        }
+        data: { labels: data.map((_, i) => i), datasets: [{ data: data, borderColor: '#58a6ff', backgroundColor: 'rgba(88,166,255,0.2)', tension: 0.3 }] },
+        options: { responsive: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
       });
     }
 
-    load().catch(e => console.error("Fehler beim Laden: ", e));
+    function drawMainChart(data) {
+      const ctx = document.getElementById('stocksChart').getContext('2d');
+      const labels = data.map((_, i) => i);
+      new Chart(ctx, {
+        type: 'line',
+        data: { labels: labels, datasets: [{ label: 'Preis (USD)', data: data, borderColor: '#58a6ff', backgroundColor: 'rgba(88,166,255,0.2)', tension: 0.3 }] },
+        options: { scales: { y: { beginAtZero: false } } }
+      });
+    }
+
+    // Live Update alle 60 Sekunden
+    loadStocks();
+    setInterval(loadStocks, 60000);
   </script>
 </body>
 </html>
-
-
-
