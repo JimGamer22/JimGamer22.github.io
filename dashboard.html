@@ -1,1 +1,89 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Minecraft Dashboard</title>
+<style>
+    body {
+        background: #0f0f0f;
+        color: white;
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+    }
+
+    h1 {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .card {
+        background: #1c1c1c;
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        box-shadow: 0 0 20px #000;
+    }
+
+    .grid {
+        display: grid;
+        gap: 20px;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    }
+
+    .label {
+        opacity: 0.7;
+        font-size: 0.9rem;
+    }
+
+    .value {
+        font-size: 1.6rem;
+        font-weight: bold;
+    }
+
+    a {
+        color: #4cff4c;
+        text-decoration: none;
+    }
+</style>
+
+<script>
+// Fake data animation
+setInterval(() => {
+    document.getElementById("players").innerText = Math.floor(Math.random() * 12);
+    document.getElementById("tps").innerText = (18 + Math.random()*2).toFixed(1);
+}, 1000);
+</script>
+
+</head>
+<body>
+
+<h1>🎮 Minecraft Server Dashboard</h1>
+
+<div class="grid">
+
+    <div class="card">
+        <div class="label">Online Spieler:</div>
+        <div id="players" class="value">0</div>
+    </div>
+
+    <div class="card">
+        <div class="label">TPS:</div>
+        <div id="tps" class="value">20.0</div>
+    </div>
+
+    <div class="card">
+        <div class="label">Status:</div>
+        <div class="value" style="color:#4cff4c;">Online</div>
+    </div>
+
+</div>
+
+<p style="text-align:center; margin-top:20px;">
+    <a href="index.html">Zurück</a>
+</p>
+
+</body>
+</html>
 
