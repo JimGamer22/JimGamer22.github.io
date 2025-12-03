@@ -100,6 +100,7 @@
     const NAME = "NVIDIA";
 
     async function fetchPriceUSD(symbol) {
+      // return 450; // feste Zahl zum Testen
       const resp = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`);
       const data = await resp.json();
       return data.c;
