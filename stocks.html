@@ -2,32 +2,49 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>Aktienkurs</title>
+    <title>Nvidia Investment</title>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
-        #price { font-size: 2em; color: green; }
+        #price, #profit { font-size: 1.8em; margin: 10px 0; }
+        #profit.positive { color: green; }
+        #profit.negative { color: red; }
         button { margin-top: 20px; padding: 10px 20px; }
     </style>
 </head>
 <body>
-    <h1>Aktienkurs von Nvidia (NVDA)</h1>
-    <div id="price">Lade...</div>
+    <h1>Dein Nvidia Investment</h1>
+    <div id="price">Lade aktuellen Kurs...</div>
+    <div id="profit">Berechne Gewinn/Verlust...</div>
     <button onclick="window.history.back()">Zurück</button>
 
     <script>
         const apiKey = "d4o9cqhr01quuso8e7f0d4o9cqhr01quuso8e7fg";
         const symbol = "NVDA";
+        const investment = 100; // Deine Investition
+        const buyPrice = 450; // Kaufkurs pro Aktie
+
         const url = `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${apiKey}`;
 
         fetch(url)
             .then(response => response.json())
             .then(data => {
-                document.getElementById("price").innerText = data.c + " USD";
+                const currentPrice = data.c;
+                document.getElementById("price").innerText = "Aktueller Kurs: " + currentPrice + " USD";
+
+                const sharesBought = investment / buyPrice;
+                const currentValue = sharesBought * currentPrice;
+                const profit = currentValue - investment;
+
+                const profitDiv = document.getElementById("profit");
+                profitDiv.innerText = `Dein Investment ist jetzt: ${currentValue.toFixed(2)} USD (${profit >= 0 ? "+" : ""}${profit.toFixed(2)} USD)`;
+                profitDiv.className = profit >= 0 ? "positive" : "negative";
             })
             .catch(err => {
                 console.error(err);
                 document.getElementById("price").innerText = "Fehler beim Laden";
+                document.getElementById("profit").innerText = "";
             });
     </script>
 </body>
 </html>
+
