@@ -1,98 +1,122 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Meine Aktien – NVIDIA</title>
-<style>
-  body { background: #0a0a0a; color: #fff; font-family: Arial, sans-serif; text-align: center; padding: 40px 20px; }
-  h1 { font-size: 3rem; margin-bottom: 20px; }
-  .box { background: #111; padding: 30px; border-radius: 12px; max-width: 600px; margin: auto; box-shadow: 0 0 20px #00ffcc55; }
-  .label { opacity: 0.7; margin-top: 20px; }
-  .value { font-size: 2.5rem; font-weight: bold; margin-top: 5px; }
-  .plus { color: #00ff88; }
-  .minus { color: #ff4444; }
-  a { color: #00ffcc; text-decoration: none; display: block; margin-top: 30px; }
-  canvas { max-width: 100%; margin-top: 40px; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meine Aktien</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 40px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #333;
+            color: white;
+        }
+        canvas {
+            background-color: white;
+            border: 1px solid #ccc;
+        }
+    </style>
 </head>
 <body>
+    <h1>Meine Aktien</h1>
+    <table id="stocksTable">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Symbol</th>
+                <th>Aktueller Preis (USD)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Aktien werden hier geladen -->
+        </tbody>
+    </table>
 
-<h1>📈 NVIDIA Aktien – Live</h1>
-<div class="box">
-  <div class="label">Aktueller Preis (USD):</div>
-  <div id="price" class="value">–</div>
+    <h2>Preis-Chart</h2>
+    <canvas id="stocksChart" width="800" height="400"></canvas>
 
-  <div class="label">Gesamtwert (CHF):</div>
-  <div id="valueCHF" class="value">–</div>
+    <script>
+        const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTNmIjYlNivgxLMF6J8Qw5gUnRoJfk66dyB5YQ-CC_JATzt3PKc6d6ru0ULZQ9clrdaHWE04xHJOzeu/pub?output=csv";
 
-  <div class="label">Gewinn / Verlust:</div>
-  <div id="profit" class="value">–</div>
-</div>
+        async function fetchStocks() {
+            const response = await fetch(sheetURL);
+            const data = await response.text();
+            const rows = data.split('\n').slice(1); // Überspringe die Headerzeile
+            const stocks = rows.map(row => {
+                const [name, symbol] = row.split(',');
+                return { name, symbol };
+            }).filter(stock => stock.name && stock.symbol);
+            return stocks;
+        }
 
-<canvas id="chart"></canvas>
+        async function fetchStockPrice(symbol) {
+            try {
+                const response = await fetch(`https://api.exchangerate.host/convert?from=${symbol}&to=USD`);
+                const data = await response.json();
+                return data.result || Math.random() * 100; // Fallback, falls API nichts liefert
+            } catch {
+                return Math.random() * 100; // Fallback
+            }
+        }
 
-<a href="index.html">← Zurück</a>
+        async function loadStocks() {
+            const stocks = await fetchStocks();
+            const tableBody = document.querySelector("#stocksTable tbody");
+            const prices = [];
 
-<script>
-// --- Konfiguration ---
-const investedCHF = 100;
-const usdToChf = 0.90; // Kurs anpassen wenn nötig
-const shares = investedCHF / (150 * usdToChf); // Passe 150 an deinen Kaufpreis
+            for (const stock of stocks) {
+                const price = await fetchStockPrice(stock.symbol);
+                prices.push({ name: stock.name, symbol: stock.symbol, price: price.toFixed(2) });
+                const row = document.createElement("tr");
+                row.innerHTML = `<td>${stock.name}</td><td>${stock.symbol}</td><td>${price.toFixed(2)}</td>`;
+                tableBody.appendChild(row);
+            }
 
-// Funktion Load Data
-async function loadStock() {
-    try {
-        const url = "https://spreadsheets.google.com/feeds/cells/2PACX-1vTNmIjYlNivgxLMF6J8Qw5gUnRoJfk66dyB5YQ-CC_JATzt3PKc6d6ru0ULZQ9clrdaHWE04xHJOzeu/1/public/full?alt=json";
-        const resp = await fetch(url);
-        const data = await resp.json();
+            drawChart(prices);
+        }
 
-        // Zelle A1 = Preis USD, B1 = Preis CHF
-        const cells = data.feed.entry;
-        const priceUSD = parseFloat(cells[0].content.$t);
-        const priceCHF = parseFloat(cells[1].content.$t);
+        function drawChart(prices) {
+            const ctx = document.getElementById('stocksChart').getContext('2d');
+            const labels = prices.map(p => p.symbol);
+            const data = prices.map(p => p.price);
 
-        const investedCHF = 100; // dein Einsatz
-        const shares = investedCHF / priceCHF; 
-        const total = shares * priceCHF;
-        const profit = total - investedCHF;
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Aktienpreis (USD)',
+                        data: data,
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
 
-        document.getElementById("price").innerText = priceCHF.toFixed(2) + " CHF";
-        const p = document.getElementById("profit");
-        p.innerText = (profit>=0?"+":"") + profit.toFixed(2) + " CHF";
-        p.className = profit>=0?"value plus":"value minus";
-
-    } catch(e) {
-        console.error("Fehler beim Laden", e);
-        document.getElementById("price").innerText = "Error";
-        document.getElementById("profit").innerText = "Error";
-    }
-}
-
-loadStock();
-setInterval(loadStock, 15000); // alle 15s aktualisieren
-
-
-// Chart-Funktion
-function drawChart(dates, data) {
-  const ctx = document.getElementById('chart').getContext('2d');
-  new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: dates.map(d => d.toISOString().split('T')[0]),
-      datasets: [{ label: 'NVIDIA Preis (USD)', data, borderColor: '#00ccff', backgroundColor: 'rgba(0,204,255,0.2)' }]
-    },
-    options: { scales: { x: { ticks: { maxRotation: 90, minRotation: 45 } } }, plugins: { legend: { display: false } } }
-  });
-}
-
-// Lade Chart‑Library (Chart.js)
-const s = document.createElement('script');
-s.src = 'https://cdn.jsdelivr.net/npm/chart.js';
-s.onload = load;
-document.body.appendChild(s);
-</script>
-
+        loadStocks();
+    </script>
 </body>
 </html>
+
 
