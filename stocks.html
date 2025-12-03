@@ -18,33 +18,40 @@
     <button onclick="window.history.back()">Zurück</button>
 
     <script>
-        const apiKey = "d4o9cqhr01quuso8e7f0d4o9cqhr01quuso8e7fg";
-        const symbol = "NVDA";
-        const investment = 100; // Deine Investition
-        const buyPrice = 450; // Kaufkurs pro Aktie
+const apiKey = "d4o9cqhr01quuso8e7f0d4o9cqhr01quuso8e7fg";
+const symbol = "NVDA";
+const investmentCHF = 100; // Deine Investition in CHF
+const buyPriceCHF = 181;   // Kaufkurs in CHF pro Aktie
+const fxSymbol = "USDCAD"; // USD/CHF Kurs von Finnhub, z.B. "CHF=X" könnte funktionieren
 
-        const url = `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${apiKey}`;
+// API URLs
+const stockUrl = `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${apiKey}`;
+const fxUrl = `https://finnhub.io/api/v1/quote?symbol=CHF=X&token=${apiKey}`; // CHF/USD Kurs
 
-        fetch(url)
-            .then(response => response.json())
-            .then(data => {
-                const currentPrice = data.c;
-                document.getElementById("price").innerText = "Aktueller Kurs: " + currentPrice + " USD";
+Promise.all([fetch(stockUrl), fetch(fxUrl)])
+  .then(responses => Promise.all(responses.map(r => r.json())))
+  .then(([stockData, fxData]) => {
+      const priceUSD = stockData.c;
+      const usdToChf = fxData.c; // aktueller USD->CHF Kurs
+      const priceCHF = priceUSD * usdToChf;
 
-                const sharesBought = investment / buyPrice;
-                const currentValue = sharesBought * currentPrice;
-                const profit = currentValue - investment;
+      document.getElementById("price").innerText = "Aktueller Kurs: " + priceCHF.toFixed(2) + " CHF";
 
-                const profitDiv = document.getElementById("profit");
-                profitDiv.innerText = `Dein Investment ist jetzt: ${currentValue.toFixed(2)} USD (${profit >= 0 ? "+" : ""}${profit.toFixed(2)} USD)`;
-                profitDiv.className = profit >= 0 ? "positive" : "negative";
-            })
-            .catch(err => {
-                console.error(err);
-                document.getElementById("price").innerText = "Fehler beim Laden";
-                document.getElementById("profit").innerText = "";
-            });
-    </script>
+      const sharesBought = investmentCHF / buyPriceCHF;
+      const currentValue = sharesBought * priceCHF;
+      const profit = currentValue - investmentCHF;
+
+      const profitDiv = document.getElementById("profit");
+      profitDiv.innerText = `Dein Investment ist jetzt: ${currentValue.toFixed(2)} CHF (${profit >= 0 ? "+" : ""}${profit.toFixed(2)} CHF)`;
+      profitDiv.className = profit >= 0 ? "positive" : "negative";
+  })
+  .catch(err => {
+      console.error(err);
+      document.getElementById("price").innerText = "Fehler beim Laden";
+      document.getElementById("profit").innerText = "";
+  });
+</script>
+
 </body>
 </html>
 
