@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meine Aktien – NVIDIA</title>
+
+<style>
+    body {
+        background: #0a0a0a;
+        color: #fff;
+        font-family: Arial, sans-serif;
+        text-align: center;
+        padding: 40px 20px;
+    }
+
+    h1 {
+        font-size: 3.2rem;
+        text-shadow: 0 0 25px #00ffcc;
+        margin-bottom: 30px;
+    }
+
+    .box {
+        background: #111;
+        padding: 30px;
+        border-radius: 12px;
+        max-width: 600px;
+        margin: auto;
+        box-shadow: 0 0 30px #00ffcc55;
+    }
+
+    .label {
+        opacity: 0.7;
+        font-size: 1.2rem;
+        margin-top: 20px;
+    }
+
+    .value {
+        font-size: 3rem;
+        font-weight: bold;
+        margin-top: 10px;
+    }
+
+    .plus {
+        color: #00ff88;
+        text-shadow: 0 0 15px #00ff88;
+    }
+
+    .minus {
+        color: #ff4444;
+        text-shadow: 0 0 15px #ff4444;
+    }
+
+    a {
+        display: inline-block;
+        margin-top: 40px;
+        color: #00ffcc;
+        text-decoration: none;
+        font-size: 1.3rem;
+    }
+</style>
+
+<script>
+// --- KONFIG ---
+const investedCHF = 100;    // Dein Einsatz
+const usdToChf = 0.89;       // USD → CHF (ungefährer Wert)
+const shares = investedCHF / (145 * usdToChf);  
+// 145 USD = Beispielpreis zur Berechnung wieviel Aktien du hast
+
+// --- Daten laden ---
+async function loadStock() {
+    try {
+        const url = "https://query1.finance.yahoo.com/v8/finance/chart/NVDA";
+        const response = await fetch(url);
+        const data = await response.json();
+
+        const result = data.chart.result[0];
+        const price = result.meta.regularMarketPrice;
+
+        const priceCHF = price * usdToChf;
+        const totalValue = shares * priceCHF;
+        const profit = totalValue - investedCHF;
+
+        document.getElementById("price").innerText = priceCHF.toFixed(2) + " CHF";
+
+        document.getElementById("value").innerText = totalValue.toFixed(2) + " CHF";
+
+        const profitElem = document.getElementById("profit");
+        profitElem.innerText = profit.toFixed(2) + " CHF";
+
+        if (profit >= 0) {
+            profitElem.classList.add("plus");
+        } else {
+            profitElem.classList.add("minus");
+        }
+
+    } catch (e) {
+        document.getElementById("price").innerText = "Error";
+        document.getElementById("value").innerText = "Error";
+        document.getElementById("profit").innerText = "Error";
+    }
+}
+
+loadStock();
+setInterval(loadStock, 15000); // alle 15s aktualisieren
+</script>
+
+</head>
+<body>
+
+<h1>📈 NVIDIA Aktien – Live</h1>
+
+<div class="box">
+
+    <div class="label">Aktueller Preis (CHF):</div>
+    <div id="price" class="value">–</div>
+
+    <div class="label">Gesamtwert deiner NVIDIA-Aktien:</div>
+    <div id="value" class="value">–</div>
+
+    <div class="label">Gewinn / Verlust:</div>
+    <div id="profit" class="value">–</div>
+
+</div>
+
+<a href="index.html">← Zurück</a>
+
+</body>
+</html>
