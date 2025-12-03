@@ -4,126 +4,88 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Meine Aktien – NVIDIA</title>
-
 <style>
-    body {
-        background: #0a0a0a;
-        color: #fff;
-        font-family: Arial, sans-serif;
-        text-align: center;
-        padding: 40px 20px;
-    }
-
-    h1 {
-        font-size: 3.2rem;
-        text-shadow: 0 0 25px #00ffcc;
-        margin-bottom: 30px;
-    }
-
-    .box {
-        background: #111;
-        padding: 30px;
-        border-radius: 12px;
-        max-width: 600px;
-        margin: auto;
-        box-shadow: 0 0 30px #00ffcc55;
-    }
-
-    .label {
-        opacity: 0.7;
-        font-size: 1.2rem;
-        margin-top: 20px;
-    }
-
-    .value {
-        font-size: 3rem;
-        font-weight: bold;
-        margin-top: 10px;
-    }
-
-    .plus {
-        color: #00ff88;
-        text-shadow: 0 0 15px #00ff88;
-    }
-
-    .minus {
-        color: #ff4444;
-        text-shadow: 0 0 15px #ff4444;
-    }
-
-    a {
-        display: inline-block;
-        margin-top: 40px;
-        color: #00ffcc;
-        text-decoration: none;
-        font-size: 1.3rem;
-    }
+  body { background: #0a0a0a; color: #fff; font-family: Arial, sans-serif; text-align: center; padding: 40px 20px; }
+  h1 { font-size: 3rem; margin-bottom: 20px; }
+  .box { background: #111; padding: 30px; border-radius: 12px; max-width: 600px; margin: auto; box-shadow: 0 0 20px #00ffcc55; }
+  .label { opacity: 0.7; margin-top: 20px; }
+  .value { font-size: 2.5rem; font-weight: bold; margin-top: 5px; }
+  .plus { color: #00ff88; }
+  .minus { color: #ff4444; }
+  a { color: #00ffcc; text-decoration: none; display: block; margin-top: 30px; }
+  canvas { max-width: 100%; margin-top: 40px; }
 </style>
-
-<script>
-// --- KONFIG ---
-const investedCHF = 100;    // Dein Einsatz
-const usdToChf = 0.89;       // USD → CHF (ungefährer Wert)
-const shares = investedCHF / (145 * usdToChf);  
-// 145 USD = Beispielpreis zur Berechnung wieviel Aktien du hast
-
-// --- Daten laden ---
-async function loadStock() {
-    try {
-        const url = "https://query1.finance.yahoo.com/v8/finance/chart/NVDA";
-        const response = await fetch(url);
-        const data = await response.json();
-
-        const result = data.chart.result[0];
-        const price = result.meta.regularMarketPrice;
-
-        const priceCHF = price * usdToChf;
-        const totalValue = shares * priceCHF;
-        const profit = totalValue - investedCHF;
-
-        document.getElementById("price").innerText = priceCHF.toFixed(2) + " CHF";
-
-        document.getElementById("value").innerText = totalValue.toFixed(2) + " CHF";
-
-        const profitElem = document.getElementById("profit");
-        profitElem.innerText = profit.toFixed(2) + " CHF";
-
-        if (profit >= 0) {
-            profitElem.classList.add("plus");
-        } else {
-            profitElem.classList.add("minus");
-        }
-
-    } catch (e) {
-        document.getElementById("price").innerText = "Error";
-        document.getElementById("value").innerText = "Error";
-        document.getElementById("profit").innerText = "Error";
-    }
-}
-
-loadStock();
-setInterval(loadStock, 15000); // alle 15s aktualisieren
-</script>
-
 </head>
 <body>
 
 <h1>📈 NVIDIA Aktien – Live</h1>
-
 <div class="box">
+  <div class="label">Aktueller Preis (USD):</div>
+  <div id="price" class="value">–</div>
 
-    <div class="label">Aktueller Preis (CHF):</div>
-    <div id="price" class="value">–</div>
+  <div class="label">Gesamtwert (CHF):</div>
+  <div id="valueCHF" class="value">–</div>
 
-    <div class="label">Gesamtwert deiner NVIDIA-Aktien:</div>
-    <div id="value" class="value">–</div>
-
-    <div class="label">Gewinn / Verlust:</div>
-    <div id="profit" class="value">–</div>
-
+  <div class="label">Gewinn / Verlust:</div>
+  <div id="profit" class="value">–</div>
 </div>
+
+<canvas id="chart"></canvas>
 
 <a href="index.html">← Zurück</a>
 
+<script>
+// --- Konfiguration ---
+const investedCHF = 100;
+const usdToChf = 0.90; // Kurs anpassen wenn nötig
+const shares = investedCHF / (150 * usdToChf); // Passe 150 an deinen Kaufpreis
+
+// Funktion Load Data
+async function load() {
+  try {
+    const resp = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/NVDA?interval=1d&period1=0&period2=' + Math.floor(Date.now()/1000));
+    const json = await resp.json();
+    const priceUSD = json.chart.result[0].meta.regularMarketPrice;
+    const priceCHF = priceUSD * usdToChf;
+    const totalCHF = shares * priceCHF;
+    const profit = totalCHF - investedCHF;
+
+    document.getElementById('price').innerText = priceUSD.toFixed(2) + ' US$';
+    document.getElementById('valueCHF').innerText = totalCHF.toFixed(2) + ' CHF';
+    const p = document.getElementById('profit');
+    p.innerText = (profit >= 0 ? '+' : '') + profit.toFixed(2) + ' CHF';
+    p.className = profit >= 0 ? 'value plus' : 'value minus';
+
+    // Chart zeichnen
+    const timestamps = json.chart.result[0].timestamp;
+    const prices = json.chart.result[0].indicators.quote[0].close;
+    drawChart(timestamps.map(t => new Date(t*1000)), prices);
+
+  } catch (e) {
+    console.error('Fehler beim Laden:', e);
+  }
+}
+
+// Chart-Funktion
+function drawChart(dates, data) {
+  const ctx = document.getElementById('chart').getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: dates.map(d => d.toISOString().split('T')[0]),
+      datasets: [{ label: 'NVIDIA Preis (USD)', data, borderColor: '#00ccff', backgroundColor: 'rgba(0,204,255,0.2)' }]
+    },
+    options: { scales: { x: { ticks: { maxRotation: 90, minRotation: 45 } } }, plugins: { legend: { display: false } } }
+  });
+}
+
+// Lade Chart‑Library (Chart.js)
+const s = document.createElement('script');
+s.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+s.onload = load;
+document.body.appendChild(s);
+</script>
+
 </body>
 </html>
+
