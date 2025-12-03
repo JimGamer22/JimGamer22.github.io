@@ -4,11 +4,29 @@
     <meta charset="UTF-8">
     <title>Nvidia Investment</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
-        #price, #profit { font-size: 1.8em; margin: 10px 0; }
-        #profit.positive { color: green; }
-        #profit.negative { color: red; }
-        button { margin-top: 20px; padding: 10px 20px; }
+        body { 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            margin-top: 50px; 
+            background-color: #121212; 
+            color: #ffffff;
+        }
+        #price, #profit { 
+            font-size: 1.8em; 
+            margin: 10px 0; 
+        }
+        #profit.positive { color: #4caf50; }
+        #profit.negative { color: #f44336; }
+        button { 
+            margin-top: 20px; 
+            padding: 10px 20px; 
+            background-color: #333; 
+            color: #fff; 
+            border: none; 
+            cursor: pointer; 
+            border-radius: 5px;
+        }
+        button:hover { background-color: #555; }
     </style>
 </head>
 <body>
@@ -18,40 +36,36 @@
     <button onclick="window.history.back()">Zurück</button>
 
     <script>
-const apiKey = "d4o9cqhr01quuso8e7f0d4o9cqhr01quuso8e7fg";
-const symbol = "NVDA";
-const investmentCHF = 100; // Deine Investition in CHF
-const buyPriceCHF = 181;   // Kaufkurs in CHF pro Aktie
-const fxSymbol = "USDCAD"; // USD/CHF Kurs von Finnhub, z.B. "CHF=X" könnte funktionieren
+        const apiKey = "d4o9cqhr01quuso8e7f0d4o9cqhr01quuso8e7fg";
+        const symbol = "NVDA";
+        const investmentCHF = 100; // Deine Investition in CHF
+        const buyPriceCHF = 181;   // Kaufkurs in CHF pro Aktie
+        const usdToChf = 0.91;     // Wechselkurs USD -> CHF (fest)
 
-// API URLs
-const stockUrl = `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${apiKey}`;
-const fxUrl = `https://finnhub.io/api/v1/quote?symbol=CHF=X&token=${apiKey}`; // CHF/USD Kurs
+        const url = `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${apiKey}`;
 
-Promise.all([fetch(stockUrl), fetch(fxUrl)])
-  .then(responses => Promise.all(responses.map(r => r.json())))
-  .then(([stockData, fxData]) => {
-      const priceUSD = stockData.c;
-      const usdToChf = fxData.c; // aktueller USD->CHF Kurs
-      const priceCHF = priceUSD * usdToChf;
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                const priceUSD = data.c;
+                const priceCHF = priceUSD * usdToChf;
 
-      document.getElementById("price").innerText = "Aktueller Kurs: " + priceCHF.toFixed(2) + " CHF";
+                document.getElementById("price").innerText = "Aktueller Kurs: " + priceCHF.toFixed(2) + " CHF";
 
-      const sharesBought = investmentCHF / buyPriceCHF;
-      const currentValue = sharesBought * priceCHF;
-      const profit = currentValue - investmentCHF;
+                const sharesBought = investmentCHF / buyPriceCHF;
+                const currentValue = sharesBought * priceCHF;
+                const profit = currentValue - investmentCHF;
 
-      const profitDiv = document.getElementById("profit");
-      profitDiv.innerText = `Dein Investment ist jetzt: ${currentValue.toFixed(2)} CHF (${profit >= 0 ? "+" : ""}${profit.toFixed(2)} CHF)`;
-      profitDiv.className = profit >= 0 ? "positive" : "negative";
-  })
-  .catch(err => {
-      console.error(err);
-      document.getElementById("price").innerText = "Fehler beim Laden";
-      document.getElementById("profit").innerText = "";
-  });
-</script>
-
+                const profitDiv = document.getElementById("profit");
+                profitDiv.innerText = `Dein Investment ist jetzt: ${currentValue.toFixed(2)} CHF (${profit >= 0 ? "+" : ""}${profit.toFixed(2)} CHF)`;
+                profitDiv.className = profit >= 0 ? "positive" : "negative";
+            })
+            .catch(err => {
+                console.error(err);
+                document.getElementById("price").innerText = "Fehler beim Laden";
+                document.getElementById("profit").innerText = "";
+            });
+    </script>
 </body>
 </html>
 
