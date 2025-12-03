@@ -1,122 +1,103 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meine Aktien</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-            background-color: #f4f4f4;
-        }
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            margin-bottom: 40px;
-        }
-        th, td {
-            border: 1px solid #ccc;
-            padding: 8px;
-            text-align: center;
-        }
-        th {
-            background-color: #333;
-            color: white;
-        }
-        canvas {
-            background-color: white;
-            border: 1px solid #ccc;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mein Portfolio — NVIDIA</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      background-color: #0d1117;
+      color: #c9d1d9;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-bottom: 40px;
+    }
+    th, td {
+      border: 1px solid #30363d;
+      padding: 8px;
+      text-align: center;
+    }
+    th {
+      background-color: #161b22;
+      color: #58a6ff;
+    }
+    td {
+      background-color: #0d1117;
+    }
+    #stocksChart {
+      background-color: #0d1117;
+      border: 1px solid #30363d;
+    }
+    .neon {
+      color: #58a6ff;
+    }
+  </style>
 </head>
 <body>
-    <h1>Meine Aktien</h1>
-    <table id="stocksTable">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Symbol</th>
-                <th>Aktueller Preis (USD)</th>
-            </tr>
-        </thead>
-        <tbody>
-            <!-- Aktien werden hier geladen -->
-        </tbody>
-    </table>
+  <h1 class="neon">Mein Portfolio – NVIDIA (NVDA)</h1>
+  <table id="stocksTable">
+    <thead>
+      <tr>
+        <th>Name</th><th>Symbol</th><th>Aktueller Preis (USD)</th><th>Wert deiner 100 USD Investition (USD)</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
-    <h2>Preis-Chart</h2>
-    <canvas id="stocksChart" width="800" height="400"></canvas>
+  <h2 class="neon">Preis‑Chart</h2>
+  <canvas id="stocksChart" width="800" height="400"></canvas>
 
-    <script>
-        const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTNmIjYlNivgxLMF6J8Qw5gUnRoJfk66dyB5YQ-CC_JATzt3PKc6d6ru0ULZQ9clrdaHWE04xHJOzeu/pub?output=csv";
+  <script>
+    // <== hier deinen eigenen API Schlüssel einsetzen:
+    const FINNHUB_API_KEY = "d4o9cqhr01quuso8e7f0d4o9cqhr01quuso8e7fg";
 
-        async function fetchStocks() {
-            const response = await fetch(sheetURL);
-            const data = await response.text();
-            const rows = data.split('\n').slice(1); // Überspringe die Headerzeile
-            const stocks = rows.map(row => {
-                const [name, symbol] = row.split(',');
-                return { name, symbol };
-            }).filter(stock => stock.name && stock.symbol);
-            return stocks;
+    async function fetchPrice(symbol) {
+      const resp = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`);
+      const json = await resp.json();
+      return json.c; // 'c' = aktueller Kurs
+    }
+
+    async function load() {
+      const symbol = "NVDA";
+      const name = "NVIDIA";
+      const price = await fetchPrice(symbol);
+      const invested = 100; // dein investierter Betrag in USD
+      const valueNow = (invested / price).toFixed(4) * price; // vereinfacht: investiert / preis * preis → eigentlich investiert
+      const tableBody = document.querySelector("#stocksTable tbody");
+      const row = document.createElement("tr");
+      row.innerHTML = `<td>${name}</td><td>${symbol}</td><td>${price.toFixed(2)}</td><td>${( (invested / price) * price ).toFixed(2)}</td>`;
+      tableBody.appendChild(row);
+      drawChart(symbol, price);
+    }
+
+    async function drawChart(symbol, currentPrice) {
+      // Historische 1‑Monats‑Daten
+      const now = Math.floor(Date.now() / 1000);
+      const monthAgo = now - 30*24*60*60;
+      const resp = await fetch(`https://finnhub.io/api/v1/stock/candle?symbol=${symbol}&resolution=D&from=${monthAgo}&to=${now}&token=${FINNHUB_API_KEY}`);
+      const data = await resp.json();
+      const prices = data.c; // Schlusskurse
+      const labels = data.t.map(ts => new Date(ts*1000).toLocaleDateString());
+
+      const ctx = document.getElementById('stocksChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: { labels: labels, datasets: [{ label: 'Preis (USD)', data: prices, borderColor: '#58a6ff', backgroundColor: 'rgba(88,166,255,0.2)' }] },
+        options: {
+          scales: { y: { beginAtZero: false } }
         }
+      });
+    }
 
-        async function fetchStockPrice(symbol) {
-            try {
-                const response = await fetch(`https://api.exchangerate.host/convert?from=${symbol}&to=USD`);
-                const data = await response.json();
-                return data.result || Math.random() * 100; // Fallback, falls API nichts liefert
-            } catch {
-                return Math.random() * 100; // Fallback
-            }
-        }
-
-        async function loadStocks() {
-            const stocks = await fetchStocks();
-            const tableBody = document.querySelector("#stocksTable tbody");
-            const prices = [];
-
-            for (const stock of stocks) {
-                const price = await fetchStockPrice(stock.symbol);
-                prices.push({ name: stock.name, symbol: stock.symbol, price: price.toFixed(2) });
-                const row = document.createElement("tr");
-                row.innerHTML = `<td>${stock.name}</td><td>${stock.symbol}</td><td>${price.toFixed(2)}</td>`;
-                tableBody.appendChild(row);
-            }
-
-            drawChart(prices);
-        }
-
-        function drawChart(prices) {
-            const ctx = document.getElementById('stocksChart').getContext('2d');
-            const labels = prices.map(p => p.symbol);
-            const data = prices.map(p => p.price);
-
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Aktienpreis (USD)',
-                        data: data,
-                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    scales: {
-                        y: { beginAtZero: true }
-                    }
-                }
-            });
-        }
-
-        loadStocks();
-    </script>
+    load().catch(e => console.error("Fehler beim Laden: ", e));
+  </script>
 </body>
 </html>
+
 
 
