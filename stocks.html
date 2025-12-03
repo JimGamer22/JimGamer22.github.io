@@ -6,6 +6,7 @@
   <title>Mein Portfolio — NVIDIA</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
+    /* Basis Dark/Neon-Design */
     body {
       background-color: #0d1117;
       color: #c9d1d9;
@@ -47,9 +48,32 @@
       height: 30px !important;
       width: 100px !important;
     }
+    /* Button Design passend zum Neon-Theme */
+    .back-btn {
+      display: inline-block;
+      padding: 10px 20px;
+      margin-bottom: 20px;
+      font-size: 16px;
+      color: #58a6ff;
+      background: none;
+      border: 2px solid #58a6ff;
+      border-radius: 8px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.3s ease;
+      box-shadow: 0 0 10px #58a6ff;
+    }
+    .back-btn:hover {
+      color: #0d1117;
+      background-color: #58a6ff;
+      box-shadow: 0 0 20px #58a6ff;
+    }
   </style>
 </head>
 <body>
+  <!-- Zurück-Button -->
+  <button class="back-btn" onclick="window.history.back()">⬅ Zurück</button>
+
   <h1>Mein Portfolio – NVIDIA (NVDA)</h1>
   <table id="stocksTable">
     <thead>
@@ -71,7 +95,7 @@
   <script>
     const FINNHUB_API_KEY = "d4o9cqhr01quuso8e7f0d4o9cqhr01quuso8e7fg";
     const INVESTED_CHF = 100; // investierter Betrag in CHF
-    const PRICE_AT_PURCHASE_USD = 300; // angenommen: Kaufkurs der Aktie in USD
+    const PRICE_AT_PURCHASE_USD = 300; // angenommener Kaufkurs
     const SYMBOL = "NVDA";
     const NAME = "NVIDIA";
 
@@ -103,7 +127,7 @@
       const profitClass = profit >= 0 ? "profit" : "loss";
 
       const tableBody = document.querySelector("#stocksTable tbody");
-      tableBody.innerHTML = ""; // clear previous
+      tableBody.innerHTML = ""; // vorherige Zeilen löschen
 
       const tr = document.createElement("tr");
       tr.innerHTML = `
@@ -140,7 +164,7 @@
       });
     }
 
-    // Live Update alle 60 Sekunden
+    // Live Update jede Minute
     loadStocks();
     setInterval(loadStocks, 60000);
   </script>
