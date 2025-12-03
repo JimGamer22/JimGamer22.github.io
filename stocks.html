@@ -41,30 +41,37 @@ const usdToChf = 0.90; // Kurs anpassen wenn nötig
 const shares = investedCHF / (150 * usdToChf); // Passe 150 an deinen Kaufpreis
 
 // Funktion Load Data
-async function load() {
-  try {
-    const resp = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/NVDA?interval=1d&period1=0&period2=' + Math.floor(Date.now()/1000));
-    const json = await resp.json();
-    const priceUSD = json.chart.result[0].meta.regularMarketPrice;
-    const priceCHF = priceUSD * usdToChf;
-    const totalCHF = shares * priceCHF;
-    const profit = totalCHF - investedCHF;
+async function loadStock() {
+    try {
+        const url = "https://spreadsheets.google.com/feeds/cells/2PACX-1vTNmIjYlNivgxLMF6J8Qw5gUnRoJfk66dyB5YQ-CC_JATzt3PKc6d6ru0ULZQ9clrdaHWE04xHJOzeu/1/public/full?alt=json";
+        const resp = await fetch(url);
+        const data = await resp.json();
 
-    document.getElementById('price').innerText = priceUSD.toFixed(2) + ' US$';
-    document.getElementById('valueCHF').innerText = totalCHF.toFixed(2) + ' CHF';
-    const p = document.getElementById('profit');
-    p.innerText = (profit >= 0 ? '+' : '') + profit.toFixed(2) + ' CHF';
-    p.className = profit >= 0 ? 'value plus' : 'value minus';
+        // Zelle A1 = Preis USD, B1 = Preis CHF
+        const cells = data.feed.entry;
+        const priceUSD = parseFloat(cells[0].content.$t);
+        const priceCHF = parseFloat(cells[1].content.$t);
 
-    // Chart zeichnen
-    const timestamps = json.chart.result[0].timestamp;
-    const prices = json.chart.result[0].indicators.quote[0].close;
-    drawChart(timestamps.map(t => new Date(t*1000)), prices);
+        const investedCHF = 100; // dein Einsatz
+        const shares = investedCHF / priceCHF; 
+        const total = shares * priceCHF;
+        const profit = total - investedCHF;
 
-  } catch (e) {
-    console.error('Fehler beim Laden:', e);
-  }
+        document.getElementById("price").innerText = priceCHF.toFixed(2) + " CHF";
+        const p = document.getElementById("profit");
+        p.innerText = (profit>=0?"+":"") + profit.toFixed(2) + " CHF";
+        p.className = profit>=0?"value plus":"value minus";
+
+    } catch(e) {
+        console.error("Fehler beim Laden", e);
+        document.getElementById("price").innerText = "Error";
+        document.getElementById("profit").innerText = "Error";
+    }
 }
+
+loadStock();
+setInterval(loadStock, 15000); // alle 15s aktualisieren
+
 
 // Chart-Funktion
 function drawChart(dates, data) {
