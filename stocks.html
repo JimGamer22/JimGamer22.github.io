@@ -1,173 +1,33 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mein Portfolio — NVIDIA</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    /* Basis Dark/Neon-Design */
-    body {
-      background-color: #0d1117;
-      color: #c9d1d9;
-      font-family: Arial, sans-serif;
-      padding: 20px;
-    }
-    h1, h2 {
-      color: #58a6ff;
-      text-shadow: 0 0 10px #58a6ff;
-    }
-    table {
-      border-collapse: collapse;
-      width: 100%;
-      margin-bottom: 40px;
-    }
-    th, td {
-      border: 1px solid #30363d;
-      padding: 8px;
-      text-align: center;
-    }
-    th {
-      background-color: #161b22;
-      color: #58a6ff;
-    }
-    td {
-      background-color: #0d1117;
-    }
-    .profit {
-      color: #0aff99;
-      text-shadow: 0 0 10px #0aff99;
-      font-weight: bold;
-    }
-    .loss {
-      color: #ff4c4c;
-      text-shadow: 0 0 10px #ff4c4c;
-      font-weight: bold;
-    }
-    canvas.sparkline {
-      height: 30px !important;
-      width: 100px !important;
-    }
-    /* Button Design passend zum Neon-Theme */
-    .back-btn {
-      display: inline-block;
-      padding: 10px 20px;
-      margin-bottom: 20px;
-      font-size: 16px;
-      color: #58a6ff;
-      background: none;
-      border: 2px solid #58a6ff;
-      border-radius: 8px;
-      cursor: pointer;
-      text-decoration: none;
-      transition: all 0.3s ease;
-      box-shadow: 0 0 10px #58a6ff;
-    }
-    .back-btn:hover {
-      color: #0d1117;
-      background-color: #58a6ff;
-      box-shadow: 0 0 20px #58a6ff;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Aktienkurs</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+        #price { font-size: 2em; color: green; }
+        button { margin-top: 20px; padding: 10px 20px; }
+    </style>
 </head>
 <body>
-  <!-- Zurück-Button -->
-  <button class="back-btn" onclick="window.history.back()">⬅ Zurück</button>
+    <h1>Aktienkurs von Nvidia (NVDA)</h1>
+    <div id="price">Lade...</div>
+    <button onclick="window.history.back()">Zurück</button>
 
-  <h1>Mein Portfolio – NVIDIA (NVDA)</h1>
-  <table id="stocksTable">
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Symbol</th>
-        <th>Preis (USD)</th>
-        <th>Wert Investition (CHF)</th>
-        <th>Gewinn/Verlust</th>
-        <th>Mini-Chart</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+    <script>
+        const apiKey = "d4o9cqhr01quuso8e7f0d4o9cqhr01quuso8e7fg";
+        const symbol = "NVDA";
+        const url = `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${apiKey}`;
 
-  <h2>Preis-Chart</h2>
-  <canvas id="stocksChart" width="800" height="400"></canvas>
-
-  <script>
-    const FINNHUB_API_KEY = "d4o9cqhr01quuso8e7f0d4o9cqhr01quuso8e7fg";
-    const INVESTED_CHF = 100; // investierter Betrag in CHF
-    const PRICE_AT_PURCHASE_USD = 300; // angenommener Kaufkurs
-    const SYMBOL = "NVDA";
-    const NAME = "NVIDIA";
-
-    async function fetchPriceUSD(symbol) {
-      // return 450; // feste Zahl zum Testen
-      const resp = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`);
-      const data = await resp.json();
-      return data.c;
-    }
-
-    async function fetchUSDToCHF() {
-      const resp = await fetch(`https://api.exchangerate.host/latest?base=USD&symbols=CHF`);
-      const data = await resp.json();
-      return data.rates.CHF;
-    }
-
-    async function fetchHistorical(symbol) {
-      const now = Math.floor(Date.now()/1000);
-      const monthAgo = now - 30*24*60*60;
-      const resp = await fetch(`https://finnhub.io/api/v1/stock/candle?symbol=${symbol}&resolution=D&from=${monthAgo}&to=${now}&token=${FINNHUB_API_KEY}`);
-      const data = await resp.json();
-      return data.c; // Schlusskurse
-    }
-
-    async function loadStocks() {
-      const usdPrice = await fetchPriceUSD(SYMBOL);
-      const usdToChf = await fetchUSDToCHF();
-      const chfValue = usdPrice * usdToChf * (INVESTED_CHF / (PRICE_AT_PURCHASE_USD * usdToChf));
-      const profit = chfValue - INVESTED_CHF;
-      const profitClass = profit >= 0 ? "profit" : "loss";
-
-      const tableBody = document.querySelector("#stocksTable tbody");
-      tableBody.innerHTML = ""; // vorherige Zeilen löschen
-
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${NAME}</td>
-        <td>${SYMBOL}</td>
-        <td>${usdPrice.toFixed(2)}</td>
-        <td>${chfValue.toFixed(2)}</td>
-        <td class="${profitClass}">${profit >= 0 ? '+' : ''}${profit.toFixed(2)}</td>
-        <td><canvas class="sparkline" id="sparkline"></canvas></td>
-      `;
-      tableBody.appendChild(tr);
-
-      const historical = await fetchHistorical(SYMBOL);
-      drawSparkline("sparkline", historical);
-      drawMainChart(historical);
-    }
-
-    function drawSparkline(id, data) {
-      const ctx = document.getElementById(id).getContext('2d');
-      new Chart(ctx, {
-        type: 'line',
-        data: { labels: data.map((_, i) => i), datasets: [{ data: data, borderColor: '#58a6ff', backgroundColor: 'rgba(88,166,255,0.2)', tension: 0.3 }] },
-        options: { responsive: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
-      });
-    }
-
-    function drawMainChart(data) {
-      const ctx = document.getElementById('stocksChart').getContext('2d');
-      const labels = data.map((_, i) => i);
-      new Chart(ctx, {
-        type: 'line',
-        data: { labels: labels, datasets: [{ label: 'Preis (USD)', data: data, borderColor: '#58a6ff', backgroundColor: 'rgba(88,166,255,0.2)', tension: 0.3 }] },
-        options: { scales: { y: { beginAtZero: false } } }
-      });
-    }
-
-    // Live Update jede Minute
-    loadStocks();
-    setInterval(loadStocks, 60000);
-  </script>
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("price").innerText = data.c + " USD";
+            })
+            .catch(err => {
+                console.error(err);
+                document.getElementById("price").innerText = "Fehler beim Laden";
+            });
+    </script>
 </body>
 </html>
